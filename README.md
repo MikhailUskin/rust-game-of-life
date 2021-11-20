@@ -1,4 +1,5 @@
-# Rust Conway's Game of Life
+# Rust [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
+Rust implementation of the classic rules devised by John Conway in 1970.
 ## Getting started
 First of all, install [rustup](https://www.rust-lang.org/tools/install) and check if everything is installed correctly by typing these two commands (their output may be different):
 ```
