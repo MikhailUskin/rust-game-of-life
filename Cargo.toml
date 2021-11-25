@@ -9,3 +9,4 @@ edition = "2021"
 ggez = "0.7.0"
 specs = { version = "0.17.0", features = ["specs-derive"] }
 glam = "0.20.0"
+rand = "0.8.3"

@@ -5,7 +5,11 @@ use specs::{
     join::Join, Builder, Component, ReadStorage, RunNow, System, VecStorage, World, WorldExt};
 use std::path;
 
+mod rules;
+
 const TILE_WIDTH: f32 = 10.0;
+const UNIVERSE_WIDTH: usize = 50;
+const UNIVERSE_HEIGHT: usize = 50;
 
 // This struct will hold all our game state
 struct Game {
@@ -125,22 +129,36 @@ impl<'a> System<'a> for RenderingSystem<'a> {
 
 // Initialize the level
 pub fn initialize_level(world: &mut World) {
-    create_dead_cell(
-        world,
-        Position {
-            x: 0,
-            y: 0,
-            z: 0, // we will get the z from the factory functions
-        },
-    );
-    create_alive_cell(
-        world,
-        Position {
-            x: 1,
-            y: 0,
-            z: 0, // we will get the z from the factory functions
-        },
-    );
+    let initial_generation = rules::Universe::new(UNIVERSE_WIDTH, UNIVERSE_HEIGHT).seed_initial_generation();
+
+    for m in 0..UNIVERSE_HEIGHT
+    {
+        for n in 0..UNIVERSE_WIDTH
+        {
+            if initial_generation[m][n]
+            {
+                create_alive_cell(
+                    world,
+                    Position {
+                        x: n as u8,
+                        y: m as u8,
+                        z: 0, // we will get the z from the factory functions
+                    },
+                );                
+            }
+            else
+            {
+                create_dead_cell(
+                    world,
+                    Position {
+                        x: n as u8,
+                        y: m as u8,
+                        z: 0, // we will get the z from the factory functions
+                    },
+                );                
+            }
+        }
+    }
 }
 
 pub fn main() -> GameResult {
