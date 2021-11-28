@@ -131,31 +131,21 @@ impl<'a> System<'a> for RenderingSystem<'a> {
 pub fn initialize_level(world: &mut World) {
     let initial_generation = rules::Universe::new(UNIVERSE_WIDTH, UNIVERSE_HEIGHT).seed_initial_generation();
 
-    for m in 0..UNIVERSE_HEIGHT
-    {
-        for n in 0..UNIVERSE_WIDTH
-        {
-            if initial_generation[m][n]
-            {
-                create_alive_cell(
-                    world,
-                    Position {
-                        x: n as u8,
-                        y: m as u8,
-                        z: 0, // we will get the z from the factory functions
-                    },
-                );                
+    for (y, row) in initial_generation.iter().enumerate(){
+        for (x, cell) in row.iter().enumerate(){
+            // Create the position at which to create something on the map
+            let position = Position {
+                x: x as u8,
+                y: y as u8,
+                z: 0,
+            };
+
+            // Figure out what object we should create
+            if *cell {
+                create_alive_cell(world, position);
             }
-            else
-            {
-                create_dead_cell(
-                    world,
-                    Position {
-                        x: n as u8,
-                        y: m as u8,
-                        z: 0, // we will get the z from the factory functions
-                    },
-                );                
+            else {
+                create_dead_cell(world, position);
             }
         }
     }
@@ -169,7 +159,7 @@ pub fn main() -> GameResult {
     // Create a game context and event loop
     let context_builder = ggez::ContextBuilder::new("rust_game_of_life", "game_of_life")
         .window_setup(conf::WindowSetup::default().title("Conway's Game Of Life!"))
-        .window_mode(conf::WindowMode::default().dimensions(800.0, 600.0))
+        .window_mode(conf::WindowMode::default().dimensions((UNIVERSE_WIDTH as f32)*TILE_WIDTH, (UNIVERSE_HEIGHT as f32)*TILE_WIDTH))
         .add_resource_path(path::PathBuf::from("./resources"));
 
     let (context, event_loop) = context_builder.build()?;
