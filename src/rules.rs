@@ -34,7 +34,7 @@ impl Universe {
         for m in 0..universe_height
         {
             initial_generation.push(vec![]);
-            for n in 0..universe_width
+            for _ in 0..universe_width
             {
                 let is_cell_alive = random_generator.sample(&uniform_range) >= 5;
                 initial_generation[m].push(is_cell_alive);
