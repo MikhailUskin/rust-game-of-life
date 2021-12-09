@@ -75,20 +75,14 @@ impl EventHandler for GameState {
 pub fn initialize_level(world: &mut World) {
     let initial_generation = world.read_resource::<Universe>().seed_initial_generation();
     for (cell_y, row) in initial_generation.iter().enumerate(){
-        for (cell_x, is_alive) in row.iter().enumerate(){
+        for (cell_x, _) in row.iter().enumerate(){
             // Create the position at which to create something on the map
             let position = Position {
                 x: cell_x as u8,
                 y: cell_y as u8,
             };
 
-            // Figure out what object we should create
-            if *is_alive {
-                create_alive_cell(world, position);
-            }
-            else {
-                create_dead_cell(world, position);
-            }
+            create_cell(world, position);
         }
     }
 
