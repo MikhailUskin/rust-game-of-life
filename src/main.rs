@@ -1,4 +1,4 @@
-use ggez::{conf, Context, GameResult};
+use ggez::{conf, timer, Context, GameResult};
 use ggez::event::{self, EventHandler, MouseButton};
 use specs::{RunNow, World, WorldExt};
 use std::path;
@@ -27,12 +27,14 @@ struct GameState {
 // - updating
 // - rendering
 impl EventHandler for GameState {
-    fn update(&mut self, _context : &mut Context) -> GameResult<()> {
+    fn update(&mut self, context : &mut Context) -> GameResult<()> {
 
-        // Run input system
-        {
-            let mut is = InputSystem {};
-            is.run_now(&self.world);
+        while timer::check_update_time(context, DESIRED_FPS) {
+            // Run input system
+            {
+                let mut is = InputSystem {};
+                is.run_now(&self.world);
+            }
         }
 
         Ok(())
@@ -44,6 +46,8 @@ impl EventHandler for GameState {
             let mut rs = RenderingSystem { context };
             rs.run_now(&self.world);
         }
+
+        ggez::timer::yield_now();
 
         Ok(())
     }
