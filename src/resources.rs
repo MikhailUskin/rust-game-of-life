@@ -1,6 +1,8 @@
 use specs::World;
 use ggez::event::MouseButton;
 use crate::components::*;
+use crate::constants::*;
+use crate::rules::*;
 
 // Resources
 #[derive(Default)]
@@ -12,4 +14,5 @@ pub struct InputQueue {
 // Registering resources
 pub fn register_resources(world: &mut World) {
     world.insert(InputQueue::default());
+    world.insert(Universe::new(UNIVERSE_WIDTH, UNIVERSE_HEIGHT));
 }

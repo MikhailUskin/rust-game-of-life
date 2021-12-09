@@ -15,6 +15,7 @@ use crate::components::*;
 use crate::constants::*;
 use crate::entities::*;
 use crate::systems::*;
+use crate::rules::*;
 
 // This struct will hold all our game state
 struct GameState {
@@ -68,8 +69,7 @@ impl EventHandler for GameState {
 
 // Initialize the level
 pub fn initialize_level(world: &mut World) {
-    let initial_generation = rules::Universe::new(UNIVERSE_WIDTH, UNIVERSE_HEIGHT).seed_initial_generation();
-
+    let initial_generation = world.read_resource::<Universe>().seed_initial_generation();
     for (cell_y, row) in initial_generation.iter().enumerate(){
         for (cell_x, is_alive) in row.iter().enumerate(){
             // Create the position at which to create something on the map
