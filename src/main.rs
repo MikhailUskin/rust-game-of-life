@@ -37,6 +37,9 @@ impl EventHandler for GameState {
             }
         }
 
+        let mut universe_field = self.world.write_resource::<UniverseField>();
+        universe_field.field.next_generation();
+
         Ok(())
     }
 
@@ -73,20 +76,18 @@ impl EventHandler for GameState {
 
 // Initialize the level
 pub fn initialize_level(world: &mut World) {
-    let initial_generation = world.read_resource::<Universe>().seed_initial_generation();
-    for (cell_y, row) in initial_generation.iter().enumerate(){
-        for (cell_x, _) in row.iter().enumerate(){
+    let (universe_height, universe_width) = world.read_resource::<Universe>().shape();
+    for row in 0..universe_height{
+        for column in 0..universe_width{
             // Create the position at which to create something on the map
             let position = Position {
-                x: cell_x as u8,
-                y: cell_y as u8,
+                x: column as u8,
+                y: row as u8,
             };
 
             create_cell(world, position);
         }
     }
-
-    world.insert(initial_generation);
 }
 
 fn generate_game_state() -> GameState {

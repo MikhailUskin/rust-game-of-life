@@ -1,7 +1,6 @@
 use specs::World;
 use ggez::event::MouseButton;
 use crate::components::*;
-use crate::constants::*;
 use crate::rules::*;
 
 // Resources
@@ -11,8 +10,18 @@ pub struct InputQueue {
     pub pressed_cell_positions: Vec<Position>,
 }
 
+pub struct UniverseField {
+    pub field: Universe,
+}
+
+impl Default for UniverseField {
+    fn default() -> Self {
+        Self { field: Universe::new() }
+    }
+}
+
 // Registering resources
 pub fn register_resources(world: &mut World) {
     world.insert(InputQueue::default());
-    world.insert(Universe::new(UNIVERSE_WIDTH, UNIVERSE_HEIGHT));
+    world.insert(UniverseField::default());
 }

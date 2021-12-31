@@ -1,18 +1,17 @@
 use ggez::event::MouseButton;
 use specs::{System, Write};
 use crate::resources::*;
-use crate::rules::*;
 
 pub struct InputSystem {}
 
 impl<'a> System<'a> for InputSystem {
     type SystemData = (
         Write<'a, InputQueue>,
-        Write<'a, Generation>,
+        Write<'a, UniverseField>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut input_queue, mut generation) = data;
+        let (mut input_queue, mut universe_field) = data;
 
         while 
             input_queue.mouse_button_events.len() > 0 && 
@@ -37,8 +36,8 @@ impl<'a> System<'a> for InputSystem {
             let pressed_cell_y = pressed_position.y;
 
             match button {
-                MouseButton::Left => generation[pressed_cell_y as usize][pressed_cell_x as usize] = CELL_IS_ALIVE,
-                MouseButton::Right => generation[pressed_cell_y as usize][pressed_cell_x as usize] = CELL_IS_DEAD,
+                MouseButton::Left => universe_field.field.revive_cell(pressed_cell_y, pressed_cell_x),
+                MouseButton::Right => universe_field.field.kill_cell(pressed_cell_y, pressed_cell_x),
                 _ => ()
             }
         }

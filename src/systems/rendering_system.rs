@@ -4,6 +4,7 @@ use ggez::graphics::{self, DrawParam, Image};
 use specs::{join::Join, ReadStorage, Read, System};
 use crate::constants::*;
 use crate::components::*;
+use crate::resources::*;
 use crate::rules::*;
 
 pub struct RenderingSystem<'a> {
@@ -15,11 +16,11 @@ impl<'a> System<'a> for RenderingSystem<'a> {
     type SystemData = (
         ReadStorage<'a, Position>, 
         ReadStorage<'a, Renderable>,
-        Read<'a, Generation>,
+        Read<'a, UniverseField>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (positions, renderables, generation) = data;
+        let (positions, renderables, universe_field) = data;
 
         // Clearing the screen (this gives us the background colour)
         graphics::clear(self.context, graphics::Color::new(0.0, 0.0, 0.0, 1.0));
@@ -30,7 +31,7 @@ impl<'a> System<'a> for RenderingSystem<'a> {
         // Iterate through all pairs of positions & renderables, load the image
         // and draw it at the specified position.
         for (position, renderable) in rendering_data.iter() {
-            if generation[position.y as usize][position.x as usize] == CELL_IS_DEAD {
+            if universe_field.field.get_cell_state(position.y, position.x) == CELL_IS_DEAD {
                 continue;
             }
 
