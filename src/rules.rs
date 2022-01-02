@@ -1,4 +1,5 @@
 use nalgebra::{matrix, SMatrix};
+use std::cmp;
 use crate::constants::*;
 
 pub type UniverseState = SMatrix<u8, UNIVERSE_WIDTH, UNIVERSE_HEIGHT>;
@@ -15,9 +16,53 @@ pub fn convolve_full_wrap<const R1: usize, const C1: usize, const R2: usize, con
         panic!("convolve_full_wrap expects `self.shape() > kernel.shape()`, received {:?} and {:?} respectively.", matrix_shape, kernel_shape);
     }
 
-    
+    let mut convolve_result = SMatrix::<u8, R1, C1>::zeros();
 
-    SMatrix::<u8, R1, C1>::zeros()
+    let matrix_height = matrix.shape().0;
+    let matrix_width = matrix.shape().1;
+
+    let kernel_height = kernel.shape().0;
+    let kernel_width = kernel.shape().1;
+
+    let kernel_height_half = kernel_height / 2;
+    let kernel_width_half = kernel_width / 2;
+
+    for row_index in 0..matrix_height
+    {
+        for column_index in 0..matrix_width
+        {
+            let convolve_position = (row_index, column_index);
+
+            let local_slice_row = if convolve_position.0 > kernel_height_half { convolve_position.0 - kernel_height_half } else { 0 };
+            let local_slice_column = if convolve_position.0 > kernel_height_half { convolve_position.0 - kernel_height_half } else { 0 };
+            let local_slice_position = (local_slice_row, local_slice_column);
+
+            let upper_left_offset = (local_slice_position.0 - convolve_position.0, local_slice_position.1 - convolve_position.1);
+
+            let max_bottow_right_position = (convolve_position.0 + kernel_height_half, convolve_position.1 + kernel_width_half);
+            let bottom_right_offset = (cmp::min(max_bottow_right_position.0, matrix_height) - convolve_position.0, 
+                cmp::min(max_bottow_right_position.1, matrix_width) - convolve_position.1);
+
+            let local_shape = (bottom_right_offset.0 - upper_left_offset.0 + 1, bottom_right_offset.1 - upper_left_offset.1 + 1);
+            let local_matrix = matrix.slice(local_slice_position, local_shape);
+
+            let kernel_center = (kernel_height_half, kernel_width_half);
+            let local_kernel_position = (kernel_center.0 - upper_left_offset.0, kernel_center.1 - upper_left_offset.1);
+            let local_kernel_shape = (bottom_right_offset.0 - upper_left_offset.0 + 1, bottom_right_offset.1 - upper_left_offset.1 + 1);
+            let local_kernel = kernel.slice(local_kernel_position, local_kernel_shape);
+            convolve_result[(row_index, column_index)] = local_matrix.dot(&local_kernel);
+
+            //let wrapped_columns_slice = matrix.fixed_slice::<>();
+            //let wrapped_columns_kernel = kernel.fixed_slice::<>();
+            //wrapped_columns_slice.dot(wrapped_columns_kernel);
+
+            //let wrapped_rows_slice = matrix.fixed_slice::<>();
+            //let wrapped_rows_kernel = kernel.fixed_slice::<>();
+            //wrapped_rows_slice.dot(wrapped_rows_kernel);
+        }
+    }
+
+    convolve_result
 }
 
 const RULE_KERNEL: RuleKernel = matrix![1, 1, 1;
