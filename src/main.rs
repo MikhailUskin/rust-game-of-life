@@ -76,7 +76,7 @@ impl EventHandler for GameState {
 
 // Initialize the level
 pub fn initialize_level(world: &mut World) {
-    let (universe_height, universe_width) = world.read_resource::<Universe>().shape();
+    let (universe_height, universe_width) = world.read_resource::<UniverseField>().field.shape();
     for row in 0..universe_height{
         for column in 0..universe_width{
             // Create the position at which to create something on the map

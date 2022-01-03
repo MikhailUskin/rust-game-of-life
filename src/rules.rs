@@ -12,7 +12,7 @@ pub fn convolve_full_wrap<const R1: usize, const C1: usize, const R2: usize, con
     let matrix_shape = matrix.shape();
     let kernel_shape = kernel.shape();
 
-    if matrix_shape > kernel_shape {
+    if kernel_shape > matrix_shape {
         panic!("convolve_full_wrap expects `self.shape() > kernel.shape()`, received {:?} and {:?} respectively.", matrix_shape, kernel_shape);
     }
 
@@ -34,10 +34,10 @@ pub fn convolve_full_wrap<const R1: usize, const C1: usize, const R2: usize, con
             let convolve_position = (row_index, column_index);
 
             let local_slice_row = if convolve_position.0 > kernel_height_half { convolve_position.0 - kernel_height_half } else { 0 };
-            let local_slice_column = if convolve_position.0 > kernel_height_half { convolve_position.0 - kernel_height_half } else { 0 };
+            let local_slice_column = if convolve_position.1 > kernel_height_half { convolve_position.1 - kernel_height_half } else { 0 };
             let local_slice_position = (local_slice_row, local_slice_column);
 
-            let upper_left_offset = (local_slice_position.0 - convolve_position.0, local_slice_position.1 - convolve_position.1);
+            let upper_left_offset = (convolve_position.0 - local_slice_position.0, convolve_position.1 - local_slice_position.1);
 
             let max_bottow_right_position = (convolve_position.0 + kernel_height_half, convolve_position.1 + kernel_width_half);
             let bottom_right_offset = (cmp::min(max_bottow_right_position.0, matrix_height) - convolve_position.0, 
