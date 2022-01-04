@@ -8,6 +8,10 @@ pub type RuleKernel = SMatrix<u8, 3, 3>;
 pub const CELL_IS_ALIVE: u8 = 1;
 pub const CELL_IS_DEAD: u8 = 0;
 
+fn is_overlapped(first_shape: (usize, usize), second_shape: (usize, usize)) -> bool {
+    return first_shape != (0, 0) && second_shape != (0, 0);
+}
+
 pub fn convolve_full_wrap<const R1: usize, const C1: usize, const R2: usize, const C2: usize>(matrix: &SMatrix<u8, R1, C1>, kernel: &SMatrix<u8, R2, C2>) -> SMatrix<u8, R1, C1> {
     let matrix_shape = matrix.shape();
     let kernel_shape = kernel.shape();
@@ -21,6 +25,9 @@ pub fn convolve_full_wrap<const R1: usize, const C1: usize, const R2: usize, con
     let matrix_height = matrix.shape().0;
     let matrix_width = matrix.shape().1;
 
+    let matrix_last_row_index = matrix_height - 1;
+    let matrix_last_column_index = matrix_width - 1;
+
     let kernel_height = kernel.shape().0;
     let kernel_width = kernel.shape().1;
 
@@ -33,6 +40,8 @@ pub fn convolve_full_wrap<const R1: usize, const C1: usize, const R2: usize, con
         {
             let convolve_position = (row_index, column_index);
 
+            // Local slice convolution
+
             let local_slice_row = if convolve_position.0 > kernel_height_half { convolve_position.0 - kernel_height_half } else { 0 };
             let local_slice_column = if convolve_position.1 > kernel_height_half { convolve_position.1 - kernel_height_half } else { 0 };
             let local_slice_position = (local_slice_row, local_slice_column);
@@ -40,25 +49,81 @@ pub fn convolve_full_wrap<const R1: usize, const C1: usize, const R2: usize, con
             let upper_left_offset = (convolve_position.0 - local_slice_position.0, convolve_position.1 - local_slice_position.1);
 
             let max_bottow_right_position = (convolve_position.0 + kernel_height_half, convolve_position.1 + kernel_width_half);
-            let bottom_right_offset = (cmp::min(max_bottow_right_position.0, matrix_height - 1) - convolve_position.0, 
-                cmp::min(max_bottow_right_position.1, matrix_width - 1) - convolve_position.1);
+            let bottom_right_offset = (cmp::min(max_bottow_right_position.0, matrix_last_row_index) - convolve_position.0, 
+                cmp::min(max_bottow_right_position.1, matrix_last_column_index) - convolve_position.1);
 
             let local_shape = (bottom_right_offset.0 + upper_left_offset.0 + 1, bottom_right_offset.1 + upper_left_offset.1 + 1);
             let local_matrix = matrix.slice(local_slice_position, local_shape);
 
             let kernel_center = (kernel_height_half, kernel_width_half);
             let local_kernel_position = (kernel_center.0 - upper_left_offset.0, kernel_center.1 - upper_left_offset.1);
-            let local_kernel_shape = (bottom_right_offset.0 + upper_left_offset.0 + 1, bottom_right_offset.1 + upper_left_offset.1 + 1);
-            let local_kernel = kernel.slice(local_kernel_position, local_kernel_shape);
-            convolve_result[(row_index, column_index)] = local_matrix.dot(&local_kernel);
+            let local_kernel = kernel.slice(local_kernel_position, local_shape);
 
-            //let wrapped_columns_slice = matrix.fixed_slice::<>();
-            //let wrapped_columns_kernel = kernel.fixed_slice::<>();
-            //wrapped_columns_slice.dot(wrapped_columns_kernel);
+            let local_neighbours = local_matrix.dot(&local_kernel);
 
-            //let wrapped_rows_slice = matrix.fixed_slice::<>();
-            //let wrapped_rows_kernel = kernel.fixed_slice::<>();
-            //wrapped_rows_slice.dot(wrapped_rows_kernel);
+            // Wrapped rows convolution
+
+            let mut wrapped_rows_matrix_position = (0, 0);
+            let mut wrapped_rows_kernel_position = (0, 0);
+            let mut wrapped_rows_shape = (0, 0);
+
+            if local_shape.0 < kernel_height {
+                let mut wrapped_rows_offset = 0;
+
+                if upper_left_offset.0 < kernel_height_half {
+                    wrapped_rows_offset = kernel_height_half - upper_left_offset.0;
+                    wrapped_rows_matrix_position = (matrix_height - wrapped_rows_offset, local_slice_position.1);
+                    wrapped_rows_kernel_position = (kernel_height - wrapped_rows_offset, local_kernel_position.1);
+                } else if bottom_right_offset.0 < kernel_height_half {
+                    wrapped_rows_offset = kernel_height_half - bottom_right_offset.0;
+                    wrapped_rows_matrix_position = (0 + wrapped_rows_offset - 1, local_slice_position.1);
+                    wrapped_rows_kernel_position = (0 + wrapped_rows_offset - 1, local_kernel_position.1);
+                }
+
+                wrapped_rows_shape = (wrapped_rows_offset, local_shape.1);
+            }
+
+            // Wrapped columns convolution
+
+            let mut wrapped_columns_matrix_position = (0, 0);
+            let mut wrapped_columns_kernel_position = (0, 0);
+            let mut wrapped_columns_shape = (0, 0);
+
+            if local_shape.1 < kernel_width {
+                let mut wrapped_columns_offset = 0;
+
+                if upper_left_offset.1 < kernel_width_half {
+                    wrapped_columns_offset = kernel_width_half - upper_left_offset.1;
+                    wrapped_columns_matrix_position = (local_slice_position.0, matrix_width - wrapped_columns_offset,);
+                    wrapped_columns_kernel_position = (local_kernel_position.0, kernel_width - wrapped_columns_offset);
+                } else if bottom_right_offset.1 < kernel_width_half {
+                    wrapped_columns_offset = kernel_width_half - bottom_right_offset.1;
+                    wrapped_columns_matrix_position = (local_slice_position.0, 0 + wrapped_columns_offset - 1);
+                    wrapped_columns_kernel_position = (local_kernel_position.0, 0 + wrapped_columns_offset - 1);
+                }
+
+                wrapped_columns_shape = (wrapped_columns_offset, local_shape.1);
+            }
+
+            let mut wrapped_rows_neighbours = 0u8;
+            let mut wrapped_columns_neighbours = 0u8;
+            let mut wrapped_overlapped_neighbours = 0u8;
+
+            if is_overlapped(wrapped_rows_shape, wrapped_columns_shape) {
+                // Do nothing
+            }
+            else if wrapped_rows_shape != (0, 0) {
+                let wrapped_rows_slice = matrix.slice(wrapped_rows_matrix_position, wrapped_rows_shape);
+                let wrapped_rows_kernel = kernel.slice(wrapped_rows_kernel_position, wrapped_rows_shape);
+                wrapped_rows_neighbours = wrapped_rows_slice.dot(&wrapped_rows_kernel);
+            } else if wrapped_columns_shape != (0, 0) {
+                let wrapped_rows_slice = matrix.slice(wrapped_columns_matrix_position, wrapped_columns_shape);
+                let wrapped_rows_kernel = kernel.slice(wrapped_columns_kernel_position, wrapped_columns_shape);
+                wrapped_columns_neighbours = wrapped_rows_slice.dot(&wrapped_rows_kernel);
+            }
+
+            convolve_result[(row_index, column_index)] = local_neighbours + 
+                wrapped_rows_neighbours + wrapped_columns_neighbours + wrapped_overlapped_neighbours;
         }
     }
 
