@@ -102,7 +102,7 @@ pub fn convolve_full_wrap<const R1: usize, const C1: usize, const R2: usize, con
                     wrapped_columns_kernel_position = (local_kernel_position.0, 0 + wrapped_columns_offset - 1);
                 }
 
-                wrapped_columns_shape = (wrapped_columns_offset, local_shape.1);
+                wrapped_columns_shape = (local_shape.0, wrapped_columns_offset);
             }
 
             let mut wrapped_rows_neighbours = 0u8;
