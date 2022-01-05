@@ -1,6 +1,7 @@
 # Rust [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
+![til](./img/window.gif)  
 Rust implementation of the classic rules devised by John Conway in 1970.  
-2D game engine [ggez](https://ggez.rs/) is used to show these rules in action!
+2D game engine [ggez](https://ggez.rs/) is used to show these rules in action!  
 ## Getting started
 First of all, install [rustup](https://www.rust-lang.org/tools/install) and check if everything is installed correctly by typing these two commands (their output may be different):
 ```
