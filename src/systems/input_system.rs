@@ -1,5 +1,6 @@
 use ggez::event::MouseButton;
 use specs::{System, Write};
+use num::clamp;
 use crate::resources::*;
 
 pub struct InputSystem {}
@@ -32,8 +33,10 @@ impl<'a> System<'a> for InputSystem {
             let button = button_optional.unwrap();
             let pressed_position = pressed_position_optional.unwrap();
 
-            let pressed_cell_x = pressed_position.x;
-            let pressed_cell_y = pressed_position.y;
+            let (universe_height, universe_width) = universe_field.field.shape();
+
+            let pressed_cell_x = clamp(pressed_position.x, 0, (universe_height - 1) as u8);
+            let pressed_cell_y = clamp(pressed_position.y, 0, (universe_width - 1) as u8);
 
             match button {
                 MouseButton::Left => universe_field.field.revive_cell(pressed_cell_y, pressed_cell_x),
