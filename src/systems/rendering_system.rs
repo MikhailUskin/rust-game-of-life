@@ -1,7 +1,8 @@
 use glam::Vec2;
 use ggez::Context;
-use ggez::graphics::{self, DrawParam, Image};
+use ggez::graphics::{self, DrawParam, Image, spritebatch::SpriteBatch};
 use specs::{join::Join, ReadStorage, Read, System};
+use std::collections::HashMap;
 use crate::constants::*;
 use crate::components::*;
 use crate::resources::*;
@@ -27,22 +28,38 @@ impl<'a> System<'a> for RenderingSystem<'a> {
 
         // Get all the renderables with their positions
         let rendering_data = (&positions, &renderables).join().collect::<Vec<_>>();
+        let mut rendering_batches: HashMap<String, Vec<DrawParam>> = HashMap::new();
 
-        // Iterate through all pairs of positions & renderables, load the image
-        // and draw it at the specified position.
+        // Iterate each of the renderables, determine which image path should be rendered
+        // at which drawparams, and then add that to the rendering_batches.
         for (position, renderable) in rendering_data.iter() {
             if universe_field.field.get_cell_state(position.y, position.x) == CELL_IS_DEAD {
                 continue;
             }
 
-            // Load the image
-            let image = Image::new(self.context, renderable.path.clone()).expect("expected image");
-            let x = position.x as f32 * TILE_WIDTH;
-            let y = position.y as f32 * TILE_WIDTH;
+            let x = (position.x as f32) * TILE_WIDTH;
+            let y = (position.y as f32) * TILE_WIDTH;
 
-            // draw
-            let draw_params = DrawParam::new().dest(Vec2::new(x, y));
-            graphics::draw(self.context, &image, draw_params).expect("expected render");
+            // Add to rendering batches
+            let draw_param = DrawParam::new().dest(Vec2::new(x, y));
+            rendering_batches
+                .entry(renderable.path.clone())
+                .or_default()
+                .push(draw_param);
+        }
+
+        // Iterate spritebatches ordered by z and actually render each of them
+        for (image_path, draw_params) in rendering_batches.iter()
+        {
+            let image = Image::new(self.context, image_path).expect("expected image");
+            let mut sprite_batch = SpriteBatch::new(image);
+
+            for draw_param in draw_params.iter() {
+                sprite_batch.add(*draw_param);
+            }
+
+            graphics::draw(self.context, &sprite_batch, graphics::DrawParam::new())
+                .expect("expected render");
         }
 
         // Finally, present the context, this will actually display everything
