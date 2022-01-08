@@ -1,4 +1,5 @@
 use nalgebra::{matrix, SMatrix};
+use rand::distributions::{Uniform};
 use std::cmp;
 use crate::constants::*;
 
@@ -141,10 +142,9 @@ pub struct Universe {
 
 impl Universe {
     fn seed_initial_generation() -> UniverseState {
-        let mut initial_generation: UniverseState = UniverseState::new_random();
-
-        let separate_point = u8::MAX / 2;
-        initial_generation /= separate_point;
+        let mut random_generator = rand::thread_rng();
+        let uniform_range = Uniform::new_inclusive(0, 1);
+        let initial_generation: UniverseState = UniverseState::from_distribution(&uniform_range, &mut random_generator);
 
         initial_generation
     }
