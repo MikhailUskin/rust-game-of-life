@@ -17,9 +17,59 @@ use crate::entities::*;
 use crate::systems::*;
 use crate::rules::*;
 
+const UNIVERSE_UPDATE_ENABLED_STATE: MouseButton = MouseButton::Other(1111);
+
+trait UniverseMouseUpdater {
+    fn is_universe_update_enabled(&self) -> bool { 
+        false 
+    }
+
+    fn enable_universe_update(&mut self) {}
+
+    fn disable_universe_update(&mut self, _button: MouseButton) {}
+
+    fn update_generation(&mut self) {}
+
+    fn capture_mouse_pressed_position(&self, _x: f32, _y:f32) {}
+}
+
 // This struct will hold all our game state
 struct GameState {
     world: World,
+    pressed_button: MouseButton,
+}
+
+impl UniverseMouseUpdater for GameState {
+    fn is_universe_update_enabled(&self) -> bool { 
+        self.pressed_button == UNIVERSE_UPDATE_ENABLED_STATE
+    }
+
+    fn enable_universe_update(&mut self) {
+        self.pressed_button = UNIVERSE_UPDATE_ENABLED_STATE;
+    }
+
+    fn disable_universe_update(&mut self, button: MouseButton) {
+        self.pressed_button = button;
+    }
+
+    fn update_generation(&mut self) {
+        if !self.is_universe_update_enabled()
+        {
+            return;
+        }
+
+        let mut universe_field = self.world.write_resource::<UniverseField>();
+        universe_field.field.next_generation();
+    }
+
+    fn capture_mouse_pressed_position(&self, x: f32, y:f32) {
+        let mut input_queue = self.world.write_resource::<InputQueue>();
+        input_queue.mouse_button_events.push(self.pressed_button);
+        input_queue.pressed_cell_positions.push(Position {
+            x: (x / TILE_WIDTH) as u8,
+            y: (y / TILE_WIDTH) as u8,
+        });
+    }
 }
 
 // This is the main event loop. ggez tells us to implement
@@ -37,8 +87,7 @@ impl EventHandler for GameState {
             }
         }
 
-        let mut universe_field = self.world.write_resource::<UniverseField>();
-        universe_field.field.next_generation();
+        self.update_generation();
 
         Ok(())
     }
@@ -56,21 +105,32 @@ impl EventHandler for GameState {
     }
 
     fn mouse_button_down_event(&mut self, _ctx: &mut Context, button: MouseButton, x: f32, y: f32) {
-        println!("Mouse button pressed: {:?}, x: {}, y: {}", button, x, y);
-
-        let mut input_queue = self.world.write_resource::<InputQueue>();
-
         // Filter mouse presses
         match button {
-            MouseButton::Left => input_queue.mouse_button_events.push(MouseButton::Left),
-            MouseButton::Right => input_queue.mouse_button_events.push(MouseButton::Right),
+            MouseButton::Left => self.disable_universe_update(MouseButton::Left),
+            MouseButton::Right => self.disable_universe_update(MouseButton::Right),
             _ => return,
         }
 
-        input_queue.pressed_cell_positions.push(Position {
-            x: (x / TILE_WIDTH) as u8,
-            y: (y / TILE_WIDTH) as u8,
-        });
+        self.capture_mouse_pressed_position(x, y);
+    }
+
+    fn mouse_button_up_event(&mut self, _ctx: &mut Context, button: MouseButton, _x: f32, _y: f32) {
+        // Filter mouse presses
+        match button {
+            MouseButton::Left => self.enable_universe_update(),
+            MouseButton::Right => self.enable_universe_update(),
+            _ => return,
+        }
+    }
+
+    fn mouse_motion_event(&mut self, _ctx: &mut Context, x: f32, y: f32, _dx: f32, _dy: f32) {
+        if self.is_universe_update_enabled()
+        {
+            return;
+        }
+
+        self.capture_mouse_pressed_position(x, y);
     }
 }
 
@@ -97,7 +157,8 @@ fn generate_game_state() -> GameState {
     initialize_level(&mut world);
 
     return GameState {
-        world
+        world,
+        pressed_button: UNIVERSE_UPDATE_ENABLED_STATE
     };
 }
 
