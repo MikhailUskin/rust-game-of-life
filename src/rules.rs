@@ -1,20 +1,14 @@
-use nalgebra::{matrix, SMatrix, Matrix, Vector4, Vector5, Vector2, Dim, DimName, Storage, RealField, MatrixMN};
-use nalgebra::base::dimension::{DimSum, DimAdd, DimSub, DimDiff, Const, ToConst, ToTypenum, U1};
-use nalgebra::base::allocator::Allocator;
-use nalgebra::base::default_allocator::DefaultAllocator;
+use nalgebra::{matrix, SMatrix};
 use rand::distributions::{Uniform};
-use std::cmp;
 use crate::constants::*;
 
 pub type RuleKernel = SMatrix<u8, RULE_KERNEL_WIDTH, RULE_KERNEL_HEIGHT>;
-pub type UniverseState = SMatrix<u8, UNIVERSE_WIDTH, UNIVERSE_HEIGHT>;
+pub type UniverseWrapped = SMatrix<u8, UNIVERSE_WRAPPED_WIDTH, UNIVERSE_WRAPPED_HEIGHT>;
 
 const RULE_KERNEL_WIDTH_HALF: usize = RULE_KERNEL_WIDTH / 2;
 const RULE_KERNEL_HEIGHT_HALF: usize = RULE_KERNEL_HEIGHT / 2;
 const UNIVERSE_WRAPPED_WIDTH: usize = UNIVERSE_WIDTH + (2 * RULE_KERNEL_WIDTH_HALF);
 const UNIVERSE_WRAPPED_HEIGHT: usize = UNIVERSE_HEIGHT + (2 * RULE_KERNEL_HEIGHT_HALF);
-
-pub type UniverseWrapped = SMatrix<u8, UNIVERSE_WRAPPED_WIDTH, UNIVERSE_WRAPPED_HEIGHT>;
 
 pub const CELL_IS_ALIVE: u8 = 1;
 pub const CELL_IS_DEAD: u8 = 0;
@@ -40,6 +34,12 @@ pub fn convolve_torus<const R1: usize, const C1: usize, const R2: usize, const C
             torus_plane_shape, kernel_shape);
     }
 
+    let mut reflect_slice = |source_position, target_position, slice_shape| {
+        let slice_source = torus_wrapped_plane.slice(source_position, slice_shape).clone_owned();
+        let mut slice_target = torus_wrapped_plane.slice_mut(target_position, slice_shape);
+        slice_target.copy_from(&slice_source);
+    };
+
     // Corner shape (suppose kernel is square)
 
     let corner_slice_shape = (kernel_height_half, kernel_width_half);
@@ -48,37 +48,25 @@ pub fn convolve_torus<const R1: usize, const C1: usize, const R2: usize, const C
 
     let upper_left_slice_target_position = (0, 0);
     let upper_left_slice_source_position = (upper_left_slice_target_position.0 + torus_plane_height, upper_left_slice_target_position.1 + torus_plane_width);
-
-    let upper_left_slice_source = torus_wrapped_plane.slice(upper_left_slice_source_position, corner_slice_shape).clone_owned();
-    let mut upper_left_slice_target = torus_wrapped_plane.slice_mut(upper_left_slice_target_position, corner_slice_shape);
-    upper_left_slice_target.copy_from(&upper_left_slice_source);
+    reflect_slice(upper_left_slice_source_position, upper_left_slice_target_position, corner_slice_shape);
 
     // Upper right corner
 
     let upper_right_slice_target_position = (0, kernel_width_half + torus_plane_width);
     let upper_right_slice_source_position = (upper_right_slice_target_position.0 + torus_plane_height, upper_right_slice_target_position.1 - torus_plane_width);
-
-    let upper_right_slice_source = torus_wrapped_plane.slice(upper_right_slice_source_position, corner_slice_shape).clone_owned();
-    let mut upper_right_slice_target = torus_wrapped_plane.slice_mut(upper_right_slice_target_position, corner_slice_shape);
-    upper_right_slice_target.copy_from(&upper_right_slice_source);
+    reflect_slice(upper_right_slice_source_position, upper_right_slice_target_position, corner_slice_shape);
 
     // Bottom right corner
 
     let bottom_right_slice_target_position = (kernel_height_half + torus_plane_height, kernel_width_half + torus_plane_width);
     let bottom_right_slice_source_position = (bottom_right_slice_target_position.0 - torus_plane_height, bottom_right_slice_target_position.1 - torus_plane_width);
-
-    let bottom_right_slice_source = torus_wrapped_plane.slice(bottom_right_slice_source_position, corner_slice_shape).clone_owned();
-    let mut bottom_right_slice_target = torus_wrapped_plane.slice_mut(bottom_right_slice_target_position, corner_slice_shape);
-    bottom_right_slice_target.copy_from(&bottom_right_slice_source);
+    reflect_slice(bottom_right_slice_source_position, bottom_right_slice_target_position, corner_slice_shape);
 
     // Bottom left corner
 
     let bottom_left_slice_target_position = (kernel_height_half + torus_plane_height, 0);
     let bottom_left_slice_source_position = (bottom_left_slice_target_position.0 - torus_plane_height, bottom_left_slice_target_position.1 + torus_plane_width);
-
-    let bottom_left_slice_source = torus_wrapped_plane.slice(bottom_left_slice_source_position, corner_slice_shape).clone_owned();
-    let mut bottom_left_slice_target = torus_wrapped_plane.slice_mut(bottom_left_slice_target_position, corner_slice_shape);
-    bottom_left_slice_target.copy_from(&bottom_left_slice_source);
+    reflect_slice(bottom_left_slice_source_position, bottom_left_slice_target_position, corner_slice_shape);
 
     // Horizontal side shape
 
@@ -88,19 +76,13 @@ pub fn convolve_torus<const R1: usize, const C1: usize, const R2: usize, const C
 
     let left_side_target_position = (kernel_height_half, 0);
     let left_side_source_position = (left_side_target_position.0, left_side_target_position.1 + torus_plane_width);
-
-    let left_side_slice_source = torus_wrapped_plane.slice(left_side_source_position, horizontal_side_shape).clone_owned();
-    let mut left_side_slice_target = torus_wrapped_plane.slice_mut(left_side_target_position, horizontal_side_shape);
-    left_side_slice_target.copy_from(&left_side_slice_source);
+    reflect_slice(left_side_source_position, left_side_target_position, horizontal_side_shape);
 
     // Right side
 
     let right_side_target_position = (kernel_height_half, kernel_width_half + torus_plane_width);
     let right_side_source_position = (right_side_target_position.0, right_side_target_position.1 - torus_plane_width);
-
-    let right_side_slice_source = torus_wrapped_plane.slice(right_side_source_position, horizontal_side_shape).clone_owned();
-    let mut right_side_slice_target = torus_wrapped_plane.slice_mut(right_side_target_position, horizontal_side_shape);
-    right_side_slice_target.copy_from(&right_side_slice_source);
+    reflect_slice(right_side_source_position, right_side_target_position, horizontal_side_shape);
 
     // Vertical side shape
 
@@ -110,19 +92,13 @@ pub fn convolve_torus<const R1: usize, const C1: usize, const R2: usize, const C
 
     let upper_side_target_position = (0, kernel_width_half);
     let upper_side_source_position = (upper_side_target_position.0 + torus_plane_height, upper_side_target_position.1);
-
-    let upper_side_slice_source = torus_wrapped_plane.slice(upper_side_source_position, vertical_side_shape).clone_owned();
-    let mut upper_side_slice_target = torus_wrapped_plane.slice_mut(upper_side_target_position, vertical_side_shape);
-    upper_side_slice_target.copy_from(&upper_side_slice_source);
+    reflect_slice(upper_side_source_position, upper_side_target_position, vertical_side_shape);
 
     // Bottom side
 
     let bottom_side_target_position = (kernel_height_half + torus_plane_height, kernel_width_half);
     let bottom_side_source_position = (bottom_side_target_position.0 - torus_plane_height, bottom_side_target_position.1);
-
-    let bottom_side_slice_source = torus_wrapped_plane.slice(bottom_side_source_position, vertical_side_shape).clone_owned();
-    let mut bottom_side_slice_target = torus_wrapped_plane.slice_mut(bottom_side_target_position, vertical_side_shape);
-    bottom_side_slice_target.copy_from(&bottom_side_slice_source);
+    reflect_slice(bottom_side_source_position, bottom_side_target_position, vertical_side_shape);
 
     // Convolve
 
