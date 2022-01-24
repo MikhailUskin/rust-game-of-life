@@ -155,18 +155,23 @@ impl Universe {
         (UNIVERSE_HEIGHT, UNIVERSE_WIDTH)
     }
 
+    fn get_plane_position(cell_row: u8, cell_column: u8) -> (usize, usize) {
+        ((cell_row as usize) + RULE_KERNEL_HEIGHT_HALF, (cell_column as usize) + RULE_KERNEL_WIDTH_HALF)
+    }
+
     pub fn revive_cell(&mut self, cell_row: u8, cell_column: u8) {
-        self.next_generation_wrapped[(cell_row as usize, cell_column as usize)] = CELL_IS_ALIVE;
+        let position = Universe::get_plane_position(cell_row, cell_column);
+        self.next_generation_wrapped[position] = CELL_IS_ALIVE;
     }
 
     pub fn kill_cell(&mut self, cell_row: u8, cell_column: u8) {
-        self.next_generation_wrapped[(cell_row as usize, cell_column as usize)] = CELL_IS_DEAD;
+        let position = Universe::get_plane_position(cell_row, cell_column);
+        self.next_generation_wrapped[position] = CELL_IS_DEAD;
     }
 
     pub fn get_cell_state(&self, cell_row: u8, cell_column: u8) -> u8 {
-        let cell_row = (cell_row as usize) + RULE_KERNEL_HEIGHT_HALF;
-        let cell_column = (cell_column as usize) + RULE_KERNEL_WIDTH_HALF;
-        return self.next_generation_wrapped[(cell_row, cell_column)];
+        let position = Universe::get_plane_position(cell_row, cell_column);
+        return self.next_generation_wrapped[position];
     }
 
     fn is_need_to_be_killed(current_cell: u8, number_of_alive_neighbours: u8) -> bool
