@@ -80,14 +80,14 @@ impl EventHandler for GameState {
     fn update(&mut self, context : &mut Context) -> GameResult<()> {
 
         while timer::check_update_time(context, DESIRED_FPS) {
-            // Run input system
-            {
-                let mut is = InputSystem {};
-                is.run_now(&self.world);
-            }
+            self.update_generation();
         }
 
-        self.update_generation();
+        // Run input system
+        {
+            let mut is = InputSystem {};
+            is.run_now(&self.world);
+        }
 
         Ok(())
     }
