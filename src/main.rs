@@ -8,14 +8,14 @@ mod constants;
 mod entities;
 mod resources;
 mod systems;
-mod rules;
+mod universe;
 
 use crate::resources::*;
 use crate::components::*;
 use crate::constants::*;
 use crate::entities::*;
 use crate::systems::*;
-use crate::rules::*;
+use crate::universe::*;
 
 const UNIVERSE_UPDATE_ENABLED_STATE: MouseButton = MouseButton::Other(1111);
 

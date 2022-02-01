@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use crate::constants::*;
 use crate::components::*;
 use crate::resources::*;
-use crate::rules::*;
+use crate::universe::*;
 
 pub struct RenderingSystem<'a> {
     pub context: &'a mut Context,
@@ -33,7 +33,7 @@ impl<'a> System<'a> for RenderingSystem<'a> {
         // Iterate each of the renderables, determine which image path should be rendered
         // at which drawparams, and then add that to the rendering_batches.
         for (position, renderable) in rendering_data.iter() {
-            if universe_field.field.get_cell_state(position.y, position.x) == CELL_IS_DEAD {
+            if universe_field.field.get_cell_state(position.y, position.x) == CELL_IS_FREE {
                 continue;
             }
 

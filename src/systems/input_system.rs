@@ -39,8 +39,8 @@ impl<'a> System<'a> for InputSystem {
             let pressed_cell_y = clamp(pressed_position.y, 0, (universe_width - 1) as u8);
 
             match button {
-                MouseButton::Left => universe_field.field.revive_cell(pressed_cell_y, pressed_cell_x),
-                MouseButton::Right => universe_field.field.kill_cell(pressed_cell_y, pressed_cell_x),
+                MouseButton::Left => universe_field.field.populate_cell(pressed_cell_y, pressed_cell_x),
+                MouseButton::Right => universe_field.field.free_cell(pressed_cell_y, pressed_cell_x),
                 _ => ()
             }
         }

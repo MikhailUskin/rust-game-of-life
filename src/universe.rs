@@ -10,8 +10,8 @@ const RULE_KERNEL_HEIGHT_HALF: usize = RULE_KERNEL_HEIGHT / 2;
 const UNIVERSE_WRAPPED_WIDTH: usize = UNIVERSE_WIDTH + (2 * RULE_KERNEL_WIDTH_HALF);
 const UNIVERSE_WRAPPED_HEIGHT: usize = UNIVERSE_HEIGHT + (2 * RULE_KERNEL_HEIGHT_HALF);
 
-pub const CELL_IS_ALIVE: u8 = 1;
-pub const CELL_IS_DEAD: u8 = 0;
+pub const CELL_IS_POPULATED: u8 = 1;
+pub const CELL_IS_FREE: u8 = 0;
 
 pub fn convolve_torus<const R1: usize, const C1: usize, const R2: usize, const C2: usize>(torus_wrapped_plane: & mut SMatrix<u8, R1, C1>, kernel: &SMatrix<u8, R2, C2>) -> SMatrix<u8, R1, C1>
 {
@@ -141,7 +141,7 @@ impl Universe {
         initial_generation
     }
 
-    pub fn new() -> Self {
+    pub fn new_random() -> Self {
         let mut initial_generation = Universe::seed_initial_generation(); 
         let initial_neighbours = convolve_torus(&mut initial_generation, &RULE_KERNEL);
 
@@ -159,14 +159,14 @@ impl Universe {
         ((cell_row as usize) + RULE_KERNEL_HEIGHT_HALF, (cell_column as usize) + RULE_KERNEL_WIDTH_HALF)
     }
 
-    pub fn revive_cell(&mut self, cell_row: u8, cell_column: u8) {
+    pub fn populate_cell(&mut self, cell_row: u8, cell_column: u8) {
         let position = Universe::get_plane_position(cell_row, cell_column);
-        self.next_generation_wrapped[position] = CELL_IS_ALIVE;
+        self.next_generation_wrapped[position] = CELL_IS_POPULATED;
     }
 
-    pub fn kill_cell(&mut self, cell_row: u8, cell_column: u8) {
+    pub fn free_cell(&mut self, cell_row: u8, cell_column: u8) {
         let position = Universe::get_plane_position(cell_row, cell_column);
-        self.next_generation_wrapped[position] = CELL_IS_DEAD;
+        self.next_generation_wrapped[position] = CELL_IS_FREE;
     }
 
     pub fn get_cell_state(&self, cell_row: u8, cell_column: u8) -> u8 {
@@ -176,12 +176,12 @@ impl Universe {
 
     fn is_need_to_be_killed(current_cell: u8, number_of_alive_neighbours: u8) -> bool
     {
-        return current_cell == CELL_IS_ALIVE && (number_of_alive_neighbours < 2 || number_of_alive_neighbours > 3);
+        return current_cell == CELL_IS_POPULATED && (number_of_alive_neighbours < 2 || number_of_alive_neighbours > 3);
     }
 
     fn is_need_to_be_alived(current_cell: u8, number_of_alive_neighbours: u8) -> bool
     {
-        return current_cell == CELL_IS_DEAD && number_of_alive_neighbours == 3;
+        return current_cell == CELL_IS_FREE && number_of_alive_neighbours == 3;
     }
 
     pub fn next_generation(&mut self) {
@@ -190,12 +190,202 @@ impl Universe {
         self.next_generation_wrapped.zip_apply(&self.alive_neighbours_wrapped, |current_cell_state, number_of_alive_neighbours| {
             if Universe::is_need_to_be_alived(*current_cell_state, number_of_alive_neighbours)
             {
-                *current_cell_state = CELL_IS_ALIVE;
+                *current_cell_state = CELL_IS_POPULATED;
             }
             else if Universe::is_need_to_be_killed(*current_cell_state, number_of_alive_neighbours)
             {
-                *current_cell_state = CELL_IS_DEAD;
+                *current_cell_state = CELL_IS_FREE;
             }
         });
     }
+}
+
+// fn populate_all_cells(universe) {
+//     // Iterate over all cells
+// }
+
+// fn free_all_cells(universe) {
+//     // Iterate over all cells
+// }
+
+// fn create_free_universe() -> Universe {
+//     // Create universe
+//     free_all_cells(universe)
+
+//     universe
+// }
+
+// fn build_glider(upper_left_position, universe) {
+//     // Put glider starting from upper left postion
+// }
+
+// fn generate_glider_pattern(upper_left_position)  {
+//     return positions, states;
+// }
+
+// fn is_glider_detected(position, universe) -> bool {
+//     // Check each of 9 cells
+
+//     for (position, state) in generate_glider_pattern(position) {
+//         if universe.get_cell_state(position) != state {
+//             return false;
+//         }
+//     }
+
+//     return true;
+// }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    const GLIDER_PERIOD: usize = 4;
+    const GLIDER_HEIGHT: usize = 3;
+    const GLIDER_WIDTH: usize = 3;
+
+    fn iterate_universe<F: FnMut(u8, u8)>(shape: (usize, usize), mut indexer: F) {
+        let (universe_height, universe_width) = shape;
+        for row_index in 0..universe_height {
+            for column_index in 0..universe_width {
+                indexer(row_index as u8, column_index as u8);
+            }
+        }
+    }
+
+    #[test]
+    fn at_least_one_cell_is_populated() {
+
+        let universe = Universe::new_random();
+        let mut number_of_populated_cells: usize = 0;
+
+        let indexer = |row_index: u8, column_index: u8| {
+            if universe.get_cell_state(row_index, column_index) == CELL_IS_POPULATED {
+                number_of_populated_cells += 1;
+            }
+        };
+
+        iterate_universe(universe.shape(), indexer);
+        assert!(number_of_populated_cells > 0);
+    }
+
+    #[test]
+    fn at_least_one_cell_is_free() {
+
+        let universe = Universe::new_random();
+        let mut number_of_free_cells: usize = 0;
+
+        let indexer = |row_index: u8, column_index: u8| {
+            if universe.get_cell_state(row_index, column_index) == CELL_IS_FREE {
+                number_of_free_cells += 1;
+            }
+        };
+
+        iterate_universe(universe.shape(), indexer);
+        assert!(number_of_free_cells > 0);
+    }
+
+    #[test]
+    fn any_cell_can_be_populated() {
+        let mut universe = Universe::new_random();
+        let shape = universe.shape();
+
+        let indexer = |row_index: u8, column_index: u8| {
+            universe.populate_cell(row_index, column_index);
+
+            let cell_state = universe.get_cell_state(row_index, column_index);
+            assert_eq!(cell_state, CELL_IS_POPULATED);
+        };
+
+        iterate_universe(shape, indexer);
+    }
+
+    #[test]
+    fn any_cell_can_be_freed() {
+        let mut universe = Universe::new_random();
+        let shape = universe.shape();
+
+        let indexer = |row_index: u8, column_index: u8| {
+            universe.free_cell(row_index, column_index);
+
+            let cell_state = universe.get_cell_state(row_index, column_index);
+            assert_eq!(cell_state, CELL_IS_FREE);
+        };
+
+        iterate_universe(shape, indexer);
+    }
+
+    // #[test]
+    // fn glider_can_move_around_the_center() {
+    //     let mut universe = create_free_universe();
+    //     let (universe_height, universe_width) = universe.shape();
+
+    //     let glider_position = (universe_height / 2, universe_width / 2);
+    //     build_glider(glider_position, &mut universe);
+
+    //     for _ in 0..GLIDER_PERIOD {
+    //         universe.next_generation();
+    //     }
+
+    //     let expected_position = (0, 0);
+    //     assert!(is_glider_detected(expected_position, universe));
+    // }
+
+    // #[test]
+    // fn glider_can_cross_horizontal_borders() {
+    //     let mut universe = create_free_universe();
+    //     let (universe_height, universe_width) = universe.shape();
+
+    //     let glider_position = (universe_height / 2, universe_width - GLIDER_WIDTH);
+    //     build_glider(glider_position, &mut universe);
+
+    //     for _ in 0..GLIDER_PERIOD {
+    //         universe.next_generation();
+    //     }
+
+    //     let expected_position = (0, 0);
+    //     assert!(is_glider_detected(expected_position, universe));
+    // }
+
+    // #[test]
+    // fn glider_can_cross_vertical_borders() {
+    //     let mut universe = create_free_universe();
+    //     let (universe_height, universe_width) = universe.shape();
+
+    //     let glider_position = (universe_height - GLIDER_HEIGHT, universe_width / 2);
+    //     build_glider(glider_position, &mut universe);
+
+    //     for _ in 0..GLIDER_PERIOD {
+    //         universe.next_generation();
+    //     }
+
+    //     let expected_position = (0, 0);
+
+    //     assert!(is_glider_detected(expected_position, universe));
+    // }
+
+    // #[test]
+    // fn glider_can_cross_corners_from_bottom_right_to_upper_left() {
+    //     // Create universe
+
+    //     // Free universe
+
+    //     // Put glider at the bottom-right corner
+
+    //     // Update universe state as period of glider
+
+    //     assert!(is_glider_detected(expected_position, universe));
+    // }
+
+    // #[test]
+    // fn glider_can_cross_corners_from_upper_right_to_bottom_left() {
+    //     // Create universe
+
+    //     // Free universe
+
+    //     // Put glider at the upper-right corner
+
+    //     // Update universe state as period of glider
+
+    //     assert!(is_glider_detected(expected_position, universe));
+    // }
 }

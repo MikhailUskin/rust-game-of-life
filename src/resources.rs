@@ -1,7 +1,7 @@
 use specs::World;
 use ggez::event::MouseButton;
 use crate::components::*;
-use crate::rules::*;
+use crate::universe::*;
 
 // Resources
 #[derive(Default)]
@@ -16,7 +16,7 @@ pub struct UniverseField {
 
 impl Default for UniverseField {
     fn default() -> Self {
-        Self { field: Universe::new() }
+        Self { field: Universe::new_random() }
     }
 }
 
