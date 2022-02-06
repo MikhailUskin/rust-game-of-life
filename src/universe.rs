@@ -200,48 +200,9 @@ impl Universe {
     }
 }
 
-// fn populate_all_cells(universe) {
-//     // Iterate over all cells
-// }
-
-// fn free_all_cells(universe) {
-//     // Iterate over all cells
-// }
-
-// fn create_free_universe() -> Universe {
-//     // Create universe
-//     free_all_cells(universe)
-
-//     universe
-// }
-
-// fn build_glider(upper_left_position, universe) {
-//     // Put glider starting from upper left postion
-// }
-
-// fn generate_glider_pattern(upper_left_position)  {
-//     return positions, states;
-// }
-
-// fn is_glider_detected(position, universe) -> bool {
-//     // Check each of 9 cells
-
-//     for (position, state) in generate_glider_pattern(position) {
-//         if universe.get_cell_state(position) != state {
-//             return false;
-//         }
-//     }
-
-//     return true;
-// }
-
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
-
-    const GLIDER_PERIOD: usize = 4;
-    const GLIDER_HEIGHT: usize = 3;
-    const GLIDER_WIDTH: usize = 3;
 
     fn iterate_universe<F: FnMut(u8, u8)>(shape: (usize, usize), mut indexer: F) {
         let (universe_height, universe_width) = shape;
@@ -250,6 +211,18 @@ mod test {
                 indexer(row_index as u8, column_index as u8);
             }
         }
+    }
+
+    fn create_free_universe() -> Universe {
+        let mut universe = Universe::new_random();
+        let shape = universe.shape();
+
+        let indexer = |row_index: u8, column_index: u8| {
+            universe.free_cell(row_index, column_index);
+        };
+
+        iterate_universe(shape, indexer);
+        universe
     }
 
     #[test]
@@ -314,78 +287,99 @@ mod test {
         iterate_universe(shape, indexer);
     }
 
-    // #[test]
-    // fn glider_can_move_around_the_center() {
-    //     let mut universe = create_free_universe();
-    //     let (universe_height, universe_width) = universe.shape();
+    const GLIDER_PERIOD: usize = 4;
+    const GLIDER_SIDE: usize = 3;
+    const GLIDER_HEIGHT: usize = GLIDER_SIDE;
+    const GLIDER_WIDTH: usize = GLIDER_SIDE;
 
-    //     let glider_position = (universe_height / 2, universe_width / 2);
-    //     build_glider(glider_position, &mut universe);
+    const GLIDER_PATTERN: SMatrix<u8, GLIDER_WIDTH, GLIDER_HEIGHT> = matrix![CELL_IS_FREE,      CELL_IS_POPULATED, CELL_IS_FREE;
+                                                                             CELL_IS_FREE,      CELL_IS_FREE,      CELL_IS_POPULATED;
+                                                                             CELL_IS_POPULATED, CELL_IS_POPULATED, CELL_IS_POPULATED];
 
-    //     for _ in 0..GLIDER_PERIOD {
-    //         universe.next_generation();
-    //     }
+    fn build_glider(upper_left_position: (usize, usize), universe: &mut Universe) {
+        let indexer = |row_index: u8, column_index: u8| {
+            let target_row_index = (upper_left_position.0 as u8) + row_index;
+            let target_column_index = (upper_left_position.1 as u8) + column_index;
+            let pattern_state = GLIDER_PATTERN[(row_index as usize, column_index as usize)];
 
-    //     let expected_position = (0, 0);
-    //     assert!(is_glider_detected(expected_position, universe));
-    // }
+            match pattern_state {
+                CELL_IS_POPULATED => universe.populate_cell(target_row_index, target_column_index),
+                CELL_IS_FREE => universe.free_cell(target_row_index, target_column_index),
+                _ => panic!("Unrecognized pattern state"),
+            }
+        };
 
-    // #[test]
-    // fn glider_can_cross_horizontal_borders() {
-    //     let mut universe = create_free_universe();
-    //     let (universe_height, universe_width) = universe.shape();
+        iterate_universe((GLIDER_HEIGHT, GLIDER_WIDTH), indexer);
+    }
 
-    //     let glider_position = (universe_height / 2, universe_width - GLIDER_WIDTH);
-    //     build_glider(glider_position, &mut universe);
+    fn is_glider_detected(upper_left_position: (usize, usize), universe: &Universe) -> bool {
+        let mut is_glider_detected = true;  
+        let indexer = |row_index: u8, column_index: u8| {
+            let target_row_index = (upper_left_position.0 as u8) + row_index;
+            let target_column_index = (upper_left_position.1 as u8) + column_index;
 
-    //     for _ in 0..GLIDER_PERIOD {
-    //         universe.next_generation();
-    //     }
+            let pattern_state = GLIDER_PATTERN[(row_index as usize, column_index as usize)];
+            let universe_state = universe.get_cell_state(target_row_index, target_column_index);
 
-    //     let expected_position = (0, 0);
-    //     assert!(is_glider_detected(expected_position, universe));
-    // }
+            is_glider_detected = pattern_state == universe_state;
+        };
 
-    // #[test]
-    // fn glider_can_cross_vertical_borders() {
-    //     let mut universe = create_free_universe();
-    //     let (universe_height, universe_width) = universe.shape();
+        iterate_universe((GLIDER_HEIGHT, GLIDER_WIDTH), indexer);
+        is_glider_detected
+    }
 
-    //     let glider_position = (universe_height - GLIDER_HEIGHT, universe_width / 2);
-    //     build_glider(glider_position, &mut universe);
+    fn run_glider_test(initial_position: (usize, usize), expected_position: (usize, usize), mut universe: Universe) {
+        build_glider(initial_position, &mut universe);
 
-    //     for _ in 0..GLIDER_PERIOD {
-    //         universe.next_generation();
-    //     }
+        let border_cross_period = GLIDER_SIDE * GLIDER_PERIOD;
+        for _ in 0..border_cross_period {
+            universe.next_generation();
+        }
 
-    //     let expected_position = (0, 0);
+        assert!(is_glider_detected(expected_position, &universe));
+    }
 
-    //     assert!(is_glider_detected(expected_position, universe));
-    // }
+    #[test]
+    fn glider_can_move_around_the_center() {
+        let universe = create_free_universe();
+        let (universe_height, universe_width) = universe.shape();
 
-    // #[test]
-    // fn glider_can_cross_corners_from_bottom_right_to_upper_left() {
-    //     // Create universe
+        let initial_position = (universe_height / 2, universe_width / 2);
+        let expected_position = (initial_position.0 + GLIDER_SIDE, initial_position.1 + GLIDER_SIDE);
 
-    //     // Free universe
+        run_glider_test(initial_position, expected_position, universe);
+    }
 
-    //     // Put glider at the bottom-right corner
+    #[test]
+    fn glider_can_cross_horizontal_borders() {
+        let universe = create_free_universe();
+        let (universe_height, universe_width) = universe.shape();
 
-    //     // Update universe state as period of glider
+        let initial_position = (universe_height / 2, universe_width - GLIDER_WIDTH);
+        let expected_position = (initial_position.0 + GLIDER_SIDE, 0);
 
-    //     assert!(is_glider_detected(expected_position, universe));
-    // }
+        run_glider_test(initial_position, expected_position, universe);
+    }
 
-    // #[test]
-    // fn glider_can_cross_corners_from_upper_right_to_bottom_left() {
-    //     // Create universe
+    #[test]
+    fn glider_can_cross_vertical_borders() {
+        let universe = create_free_universe();
+        let (universe_height, universe_width) = universe.shape();
 
-    //     // Free universe
+        let initial_position = (universe_height - GLIDER_HEIGHT, universe_width / 2);
+        let expected_position = (0, initial_position.1 + GLIDER_SIDE);
 
-    //     // Put glider at the upper-right corner
+        run_glider_test(initial_position, expected_position, universe);
+    }
 
-    //     // Update universe state as period of glider
+    #[test]
+    fn glider_can_cross_corners() {
+        let universe = create_free_universe();
+        let (universe_height, universe_width) = universe.shape();
 
-    //     assert!(is_glider_detected(expected_position, universe));
-    // }
+        let initial_position = (universe_height - GLIDER_HEIGHT, universe_width - GLIDER_WIDTH);
+        let expected_position = (0, 0);
+
+        run_glider_test(initial_position, expected_position, universe);
+    }
 }
