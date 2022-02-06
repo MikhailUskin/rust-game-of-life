@@ -1,7 +1,11 @@
 # Rust [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
 ![til](./img/window.gif)  
-Rust implementation of the classic rules devised by John Conway in 1970.  
-2D game engine [ggez](https://ggez.rs/) is used to show these rules in action!  
+* Сlassic rules devised by John Conway in 1970
+* Life evolves on the surface of toroidal universe
+* 2D game engine [ggez](https://ggez.rs/) shows these rules in action
+* Use left mouse button to populate or right mouse button to free cells
+
+---
 ## Getting started
 First of all, install [rustup](https://www.rust-lang.org/tools/install) and check if everything is installed correctly by typing these two commands (their output may be different):
 ```
