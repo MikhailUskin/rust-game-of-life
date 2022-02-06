@@ -15,7 +15,6 @@ use crate::components::*;
 use crate::constants::*;
 use crate::entities::*;
 use crate::systems::*;
-use crate::universe::*;
 
 const UNIVERSE_UPDATE_ENABLED_STATE: MouseButton = MouseButton::Other(1111);
 
