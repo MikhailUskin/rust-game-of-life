@@ -1,3 +1,5 @@
+[![build and test](https://github.com/MikhailUskin/rust-game-of-life/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/MikhailUskin/rust-game-of-life/actions/workflows/build_and_test.yml)
+
 # Rust [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
 ![til](./img/window.gif)  
 * Сlassic rules devised by John Conway in 1970
